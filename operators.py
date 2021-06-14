@@ -21,7 +21,9 @@ def move(inp, *out):
     return res
 
 
-_eq = '[->-[>]<<]'
+_not = '[->-<]>+<'
+_or = '[' + move(1) + move(0, 1) + ']'
+_and = move(1, 2) + '[-' + move(2, 1) + ']' + move(2)
 
 _add = move(0, 1)
 _sub = move(0, (1, -1))
