@@ -21,13 +21,28 @@ class OpTest(unittest.TestCase):
         self.check_operator(subtests, operator)
 
     def test_add(self):
-        subtests = [([a, b], (a + b) % 256) for a in range(255) for b in range(255)]
+        subtests = [([a, b], (a + b) % 256) for a in range(256) for b in range(256)]
         operator = operators._add
         self.check_operator(subtests, operator)
 
     def test_sub(self):
-        subtests = [([a, b], ((b - a) % 256 + 256) % 256) for a in range(255) for b in range(255)]
+        subtests = [([a, b], ((b - a) % 256 + 256) % 256) for a in range(256) for b in range(256)]
         operator = operators._sub
+        self.check_operator(subtests, operator)
+
+    def test_to1(self):
+        subtests = [([0], 0)] + [([a], 1) for a in range(1, 256)]
+        operator = operators._to1
+        self.check_operator(subtests, operator)
+
+    def test_eq(self):
+        subtests = [([a, b], int(a == b)) for a in range(256) for b in range(256)]
+        operator = operators._eq
+        self.check_operator(subtests, operator)
+
+    def test_neq(self):
+        subtests = [([a, b], int(a != b)) for a in range(256) for b in range(256)]
+        operator = operators._neq
         self.check_operator(subtests, operator)
 
     def check_operator(self, subtests, operator):
