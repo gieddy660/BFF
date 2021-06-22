@@ -50,8 +50,7 @@ class OpTest(unittest.TestCase):
             with self.subTest(subtest):
                 inp, out = subtest
                 op = BF(operator)
-                op.arr = inp
-                op.exe(go_on=True)
+                op.exe(arr=inp)
                 self.check_final_state(op, out)
 
     def check_final_state(self, bf_obj, val):

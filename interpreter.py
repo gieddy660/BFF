@@ -8,27 +8,29 @@ class BF:
             ".": 6,
             ",": 7}
 
-    def __init__(self, src=""):
+    def __init__(self, src="", *, arr=None):
         self.source = src
-        self.arr = [0]
+        if arr is None:
+            arr = [0]
+        self.arr = arr
         self.stops = {}
         self.ind_var = 0
         self.ind_src = 0
         self.ind_sts = 0
 
-    def reset(self):
-        self.__init__(self.source)
+    def reset(self, **kwargs):
+        self.__init__(self.source, **kwargs)
 
-    def exe(self, go_on=False):
+    def exe(self, go_on=False, **kwargs):
         if not go_on:
-            self.reset()
+            self.reset(**kwargs)
         while self.ind_src < len(self.source):
             self._eval(self.source[self.ind_src])(self)
             self.ind_src += 1
 
-    def debug(self, go_on=False):
+    def debug(self, go_on=False, **kwargs):
         if not go_on:
-            self.reset()
+            self.reset(**kwargs)
         while self.ind_src < len(self.source):
             A = self.arr
             B = self.ind_var
