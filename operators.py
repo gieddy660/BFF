@@ -21,8 +21,11 @@ def move(inp, *out):
     return res
 
 
+# Operations
 # result in 1
-# TODO: result in 0? makes easier to chain operations
+
+_noop = ''
+
 _not = '[->-<]>+<'
 _or = '[' + move(1) + move(0, 1) + ']'
 _and = move(1, 2) + '[-' + move(2, 1) + ']' + move(2)
@@ -30,9 +33,20 @@ _and = move(1, 2) + '[-' + move(2, 1) + ']' + move(2)
 _add = move(0, 1)
 _sub = move(0, (1, -1))
 _mul = move(1, 3) + '[-' + move(3, 1, 2) + move(2, 3) + ']' + move(3)
-_div = NotImplemented
-_mod = NotImplemented
+_div = NotImplemented  # yet
+_mod = NotImplemented  # yet
 
 _to1 = '[>+<' + move(0) + ']'
 _neq = move(1, (0, -1)) + _to1
-_eq = move(1, (0, -1)) + _to1 + move(1, 0) + _not
+_eq = _neq + move(1, 0) + _not
+
+
+# Control flow
+def _if(something):
+    """we expect the boolean value if acts according to to be at position 0"""
+    return '[[-]' + something + ']'
+
+
+def _while(something, valuate):
+    """we expect the expression to valuate to be at position 0"""
+    return valuate + '[' + something + valuate + ']'
