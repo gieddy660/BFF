@@ -1,4 +1,4 @@
-from operators import move, _if
+from operators import move, _if, _while
 
 
 class Expression:
@@ -12,13 +12,22 @@ class Expression:
 
 
 class Statement:
-    pass
+    @staticmethod
+    def make_unique_name(var_space):
+        a = 0
+        while (..., a) in var_space:
+            a += 1
+        return ..., a
+
+    @staticmethod
+    def shift_var_space(var_space: dict, delta: int):
+        return {x: pos - delta for x, pos in var_space.items()}
 
 
 class Assignment(Statement):
     # It is assumed that when a statement is executed pointer is at 0 with respect to current var_space
-    def __init__(self, target, expr):
-        self.target = target
+    def __init__(self, targets, expr):
+        self.targets = targets
         self.expr = expr
 
     def compile(self, var_space):
@@ -33,29 +42,26 @@ class Assignment(Statement):
         res += '<' * len(var_space)
 
         return_positions = self.expr.return_positions
-        for return_position in return_positions:
-            res += move(var_space[self.target])
-            res += move(len(var_space) + return_position, var_space[self.target])
+        if len(return_positions) != len(self.targets):
+            raise Exception('assignment targets must be as many as expression return values')
+        for target, return_position in zip(self.targets, return_positions):
+            res += move(var_space[target])
+            res += move(len(var_space) + return_position, var_space[target])
         return res
 
 
 class If(Statement):
     def __init__(self, test, body):
-        # test should return a bool (either 0 or 1) but I don't really know how to enforce this
         self.test = test
         self.body = body
 
-    @staticmethod
-    def make_unique_name():
-        return ...
-
     def compile(self, var_space):
-        t = self.make_unique_name()
+        t = self.make_unique_name(var_space)
         var_space = dict(var_space) | {t: len(var_space)}  # add a temporary variable, name must be unique
-        res = Assignment(t, self.test).compile(var_space)
 
+        res = Assignment((t,), self.test).compile(var_space)
         res += '>' * var_space[t]
-        res += _if('<' * var_space[t] + ''.join(statement.compile(var_space) for statement in self.body) + '>' * var_space[t])
+        res += _if(''.join(statement.compile(self.shift_var_space(var_space, var_space[t])) for statement in self.body))
         res += '<' * var_space[t]
 
         return res
@@ -65,6 +71,20 @@ class While(Statement):
     def __init__(self, test, body):
         self.test = test
         self.body = body
+
+    def compile(self, var_space):
+        t = self.make_unique_name(var_space)
+        var_space = dict(var_space) | {t: len(var_space)}
+
+        shifted_var_space = self.shift_var_space(var_space, var_space[t])
+        test = Assignment((t,), self.test)
+
+        res = test.compile(var_space)
+        res += '>' * var_space[t]
+        res += _while(''.join(statement.compile(shifted_var_space) for statement in self.body), test.compile(shifted_var_space))
+        res += '<' * var_space[t]
+
+        return res
 
 
 class Scope:

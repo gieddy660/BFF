@@ -21,6 +21,17 @@ def move(inp, *out):
     return res
 
 
+# Control flow
+def _if(something):
+    """we expect the boolean value if acts according to to be at position 0"""
+    return '[[-]' + something + ']'
+
+
+def _while(something, valuate):
+    """we expect the expression to valuate to be at position 0"""
+    return '[' + something + valuate + ']'
+
+
 # Operations
 # result in 1
 
@@ -41,12 +52,3 @@ _neq = move(1, (0, -1)) + _to1
 _eq = _neq + move(1, 0) + _not
 
 
-# Control flow
-def _if(something):
-    """we expect the boolean value if acts according to to be at position 0"""
-    return '[[-]' + something + ']'
-
-
-def _while(something, valuate):
-    """we expect the expression to valuate to be at position 0"""
-    return valuate + '[' + something + valuate + ']'
