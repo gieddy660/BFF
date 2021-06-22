@@ -81,9 +81,9 @@ class BF:
                 X = self.ind_sts - 1
                 while not self.ind_sts == X:
                     self.ind_src += 1
-                    if self.source[self.ind_src] == "[":
+                    if self.KEYS[self.source[self.ind_src]] == 4:
                         self.ind_sts += 1
-                    elif self.source[self.ind_src] == "]":
+                    elif self.KEYS[self.source[self.ind_src]] == 5:
                         self.ind_sts -= 1
 
         def goto(self):
@@ -99,6 +99,6 @@ class BF:
             print(chr(self.arr[self.ind_var]), end="")
 
         functions = [plus, minus, right, left, if_do, goto, read, print_]
-        return functions[self.KEYS[char]]
+        return functions[self.KEYS[char]] if char in self.KEYS else lambda x: x
 
     __call__ = exe
