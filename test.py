@@ -1,8 +1,10 @@
 import unittest
+from itertools import groupby
 
 import operators
 import generator
 from interpreter import BF
+from lexer import tokenize
 
 
 class OpTest(unittest.TestCase):
@@ -95,3 +97,20 @@ class GeneratorTest(unittest.TestCase):
                     else:
                         self.assertEqual(elem, 0)
                 self.assertEqual(program.ind_var, 0)
+
+
+class LexerTest(unittest.TestCase):
+    def test_base(self):
+        line1 = (('keyword', 'def', 1), ('identifier', 'main', 1), ('open_paren', '(', 1), ('close_paren', ')', 1), ('open_scope', '{', 1))
+        line2 = (('newline', '\n', 2), ('identifier', 'a', 2), ('assignment', '=', 2), ('number', '1', 2))
+        line3 = (('newline', '\n', 3), ('identifier', 'b', 3), ('open_array', '[', 3), ('number', '3', 3), ('close_array', ']', 3), ('assignment', '=', 3), ('string', '"abc"', 3))
+        line4 = (('newline', '\n', 4), ('identifier', 'c', 4), ('assignment', '=', 4), ('number', '3', 4))
+        line5 = (('newline', '\n', 5), ('end', '...', 5))
+        line6 = (('newline', '\n', 6), ('keyword', 'if', 6), ('identifier', 'a', 6), ('operator', '==', 6), ('identifier', 'b', 6))
+        line7 = (('newline', '\n', 7), ('identifier', 'c', 7), ('assignment', '=', 7), ('identifier', 'c', 7), ('operator', '*', 7), ('identifier', 'b', 7))
+        line8 = (('newline', '\n', 8), ('end', '...', 8))
+        line9 = (('newline', '\n', 9), ('close_scope', '}', 9))
+        parsed = (*line1, *line2, *line3, *line4, *line5, *line6, *line7, *line8, *line9)
+        with open('test_prog.bff', 'r') as file:
+            tokens = tuple(tokenize(file.read()))
+            self.assertEqual(tokens, parsed)
