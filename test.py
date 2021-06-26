@@ -1,8 +1,7 @@
 import unittest
-from itertools import groupby
 
-import operators
 import generator
+import operators
 from interpreter import BF
 from lexer import tokenize
 
@@ -66,17 +65,41 @@ class OpTest(unittest.TestCase):
 
 
 class GeneratorTest(unittest.TestCase):
+    def test_var_space(self):
+        a = generator.VarSpace({'a': 1, 'b': 2, 'c': 3})
+        self.assertIsInstance(a, generator.VarSpace)
+        self.assertEqual(len(a), 4)
+        b = a << 2
+        self.assertIsInstance(b, generator.VarSpace)
+        self.assertEqual(len(b), 2)
+        c = b | {'d': 2, 'e': 3}
+        self.assertIsInstance(c, generator.VarSpace)
+        self.assertEqual(len(c), 4)
+        d, key = c.add_unique()
+        self.assertNotIn(key, c)
+        self.assertIn(key, d)
+        self.assertEqual(len(d), len(c) + 1)
+
+    def test_assignment(self):
+        var_space = generator.VarSpace(('a', 'b'))
+        add = generator.Assignment(('a',), generator.Expression(('a', 'b'), (1,), operators._add))
+        src = add.compile(var_space)
+
+        subtests = (([1, 2], [3, 2]), ([3, 4], [7, 4]), ([23, 49], [72, 49]))
+        self.check_subtests(subtests, src)
+
     def test_if(self):
-        var_space = {'a': 0, 'b': 1, 'c': 2, 'd': 3}
+        var_space = generator.VarSpace(('a', 'b', 'c', 'd'))
         add = generator.Assignment(('a',), generator.Expression(('a', 'b'), (1,), operators._add))
         if_ = generator.If(generator.Expression(('c', 'd'), (1,), operators._eq), (add,))
         src = if_.compile(var_space)
 
-        subtests = (([2, 3, 1, 1], [5, 3, 1, 1]), ([4, 7, 1, 1], [11, 7, 1, 1]), ([2, 3, 1, 2], [2, 3, 1, 2]), ([5, 6, 5, 6], [5, 6, 5, 6]))
+        subtests = (([2, 3, 1, 1], [5, 3, 1, 1]), ([4, 7, 1, 1], [11, 7, 1, 1]), ([2, 3, 1, 2], [2, 3, 1, 2]),
+                    ([5, 6, 5, 6], [5, 6, 5, 6]))
         self.check_subtests(subtests, src)
 
     def test_while(self):
-        var_space = {'a': 0, 'b': 1, 'c': 2, 'd': 3}
+        var_space = generator.VarSpace(('a', 'b', 'c', 'd'))
         add = generator.Assignment(('a',), generator.Expression(('a', 'b'), (1,), operators._add))
         decr = generator.Assignment(('c',), generator.Expression(('d', 'c'), (1,), operators._sub))
         while_ = generator.While(generator.Expression(('c',), (1,), operators._to1), (add, decr))
