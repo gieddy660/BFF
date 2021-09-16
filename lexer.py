@@ -11,11 +11,13 @@ def tokenize(text):
         'open_paren': r'\(',
         'close_paren': r'\)',
         'open_array': r'\[',
+        'comma': r',',
         'close_array': r'\]',
         'open_scope': r'{',
         'close_scope': r'}',
         'operator': r'[+\-*/%]|==|!=',
         'whitespace': r'[ \t]+',
+        'returner': r'\$',
         'newline': r'\n',
         'assignment': r'=',
         'end': r'\.\.\.'
