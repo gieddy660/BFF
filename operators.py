@@ -32,6 +32,24 @@ def _while(something, valuate):
     return '[' + something + valuate + ']'
 
 
+def _copy_from_array(arr0, arr_size):
+    """The variable with the index will be at the end of the VarSpace - which will be called position 0.
+    Therefore arr0 will be a negative number. It copies the value to position 1."""
+    cycle1 = '[->>+<<' + move(arr0, 3)
+    for i in range(arr_size - 1):
+        cycle1 += move(arr0 + i + 1, arr0 + i)
+    cycle1 += move(3, arr0 + arr_size) + ']'
+
+    copy_res = move(arr0, 1, 3) + move(3, arr0)
+
+    cycle2 = '[>>-<<' + move(arr0 + arr_size, 3)
+    for i in range(arr_size - 1):
+        cycle2 += move(arr0 + arr_size - i - 1, arr0 + arr_size - i)
+    cycle2 += move(3, arr0) + ']'
+
+    return cycle1 + copy_res + cycle2
+
+
 # Operations
 # result in 1
 
@@ -51,4 +69,13 @@ _to1 = '[>+<' + move(0) + ']'
 _neq = move(1, (0, -1)) + _to1
 _eq = _neq + move(1, 0) + _not
 
+#
+#
 
+_copy_from_distance = '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + '<]' \
+                      + move(-1, 2, 3) + move(3, -1) \
+                      + '>[-' + move(3, -1) + move(1, 2) + move(0, 1) + '>]'
+
+_copy_into_distance = '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + move(2, 1) + '<]' \
+                      + move(-1) + move(2, -1) \
+                      + '>[-' + move(3, -1) + move(0, 1) + '>]'
