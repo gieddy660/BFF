@@ -47,21 +47,30 @@ class OpTest(unittest.TestCase):
         operator = operators._neq
         self.check_operator(subtests, operator)
 
-    def check_operator(self, subtests, operator):
+    def test_copy_from_distance(self):
+        t = [1, 2, 3, 0, 4, 5, 6]
+        subtests = [(t + [0], 6), (t + [1], 5), (t + [2], 4), (t + [3], 0), (t + [4], 3), (t + [5], 2), (t + [6], 1)]
+        zero_position = 7
+        operator = operators._copy_from_distance
+        self.check_operator(subtests, operator, zero_position)
+
+    def check_operator(self, subtests, operator, zero_position=0):
         for subtest in subtests:
             with self.subTest(subtest):
                 inp, out = subtest
                 op = BF(operator)
-                op.exe(arr=inp)
-                self.check_final_state(op, out)
+                op.exe(arr=inp, ind_var=zero_position)
+                self.check_final_state(op, out, zero_position)
 
-    def check_final_state(self, bf_obj, val):
+    def check_final_state(self, bf_obj, val, zero_position):
         for index, elem in enumerate(bf_obj.arr):
-            if index == 1:
+            if index < zero_position:
+                pass
+            elif index == zero_position + 1:
                 self.assertEqual(elem, val)
             else:
                 self.assertEqual(elem, 0)
-        self.assertEqual(bf_obj.ind_var, 0)
+        self.assertEqual(bf_obj.ind_var, zero_position)
 
 
 class GeneratorTest(unittest.TestCase):
@@ -126,14 +135,16 @@ class LexerTest(unittest.TestCase):
     def test_base(self):
         line1 = (('keyword', 'def', 1), ('identifier', 'main', 1), ('open_paren', '(', 1), ('close_paren', ')', 1), ('open_scope', '{', 1))
         line2 = (('newline', '\n', 2), ('identifier', 'a', 2), ('assignment', '=', 2), ('number', '1', 2))
-        line3 = (('newline', '\n', 3), ('identifier', 'b', 3), ('open_array', '[', 3), ('number', '3', 3), ('close_array', ']', 3), ('assignment', '=', 3), ('string', '"abc"', 3))
-        line4 = (('newline', '\n', 4), ('identifier', 'c', 4), ('assignment', '=', 4), ('number', '3', 4))
+        line3 = (('newline', '\n', 3), ('identifier', 'b', 3), ('open_array', '[', 3), ('number', '3', 3),
+                 ('close_array', ']', 3), ('assignment', '=', 3), ('string', '"abc"', 3))
+        line4 = (
+        ('newline', '\n', 4), ('returner', '$', 4), ('identifier', 'c', 4), ('assignment', '=', 4), ('number', '3', 4))
         line5 = (('newline', '\n', 5), ('end', '...', 5))
         line6 = (('newline', '\n', 6), ('keyword', 'if', 6), ('identifier', 'a', 6), ('operator', '==', 6), ('identifier', 'b', 6))
         line7 = (('newline', '\n', 7), ('identifier', 'c', 7), ('assignment', '=', 7), ('identifier', 'c', 7), ('operator', '*', 7), ('identifier', 'b', 7))
         line8 = (('newline', '\n', 8), ('end', '...', 8))
         line9 = (('newline', '\n', 9), ('close_scope', '}', 9))
-        parsed = (*line1, *line2, *line3, *line4, *line5, *line6, *line7, *line8, *line9)
+        expected = (*line1, *line2, *line3, *line4, *line5, *line6, *line7, *line8, *line9)
         with open('test_prog.bff', 'r') as file:
-            tokens = tuple(tokenize(file.read()))
-            self.assertEqual(tokens, parsed)
+            actual = tuple(tokenize(file.read()))
+            self.assertEqual(actual, expected)
