@@ -8,15 +8,15 @@ class BF:
             ".": 6,
             ",": 7}
 
-    def __init__(self, src="", *, arr=None):
+    def __init__(self, src="", *, arr=None, ind_var=0, ind_src=0, ind_sts=0):
         self.source = src
         if arr is None:
             arr = [0]
         self.arr = arr
         self.stops = {}
-        self.ind_var = 0
-        self.ind_src = 0
-        self.ind_sts = 0
+        self.ind_var = ind_var
+        self.ind_src = ind_src
+        self.ind_sts = ind_sts
 
     def reset(self, **kwargs):
         self.__init__(self.source, **kwargs)
