@@ -60,7 +60,8 @@ _copy_from_distance = '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + '<]' \
                       + '>[-' + move(3, -1) + move(1, 2) + move(0, 1) + '>]<' \
                       + move(2, 1)
 
-_copy_into_distance = '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + move(2, 1) + '<]' \
+_copy_into_distance = move(1, 2) \
+                      + '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + move(2, 1) + '<]' \
                       + move(-1) + move(2, -1) \
                       + '>[-' + move(3, -1) + move(0, 1) + '>]'
 
