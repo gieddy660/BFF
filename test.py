@@ -28,8 +28,13 @@ class OpTest(unittest.TestCase):
         self.check_operator(subtests, operator)
 
     def test_sub(self):
-        subtests = [([a, b], ((b - a) % 256 + 256) % 256) for a in range(256) for b in range(256)]
+        subtests = [([a, b], ((a - b) % 256 + 256) % 256) for a in range(256) for b in range(256)]
         operator = operators._sub
+        self.check_operator(subtests, operator)
+
+    def test_mul(self):
+        subtests = [([a, b], (a * b) % 256) for a in range(32) for b in range(32)]
+        operator = operators._mul
         self.check_operator(subtests, operator)
 
     def test_to1(self):
@@ -66,7 +71,7 @@ class OpTest(unittest.TestCase):
         for index, elem in enumerate(bf_obj.arr):
             if index < zero_position:
                 pass
-            elif index == zero_position + 1:
+            elif index == zero_position:
                 self.assertEqual(elem, val)
             else:
                 self.assertEqual(elem, 0)

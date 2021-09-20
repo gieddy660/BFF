@@ -33,32 +33,32 @@ def _while(something, valuate):
 
 
 # Operations
-# result in 1
+# result in 0
 
 _noop = ''
 
-_not = '[->-<]>+<'
-_or = '[' + move(1) + move(0, 1) + ']'
-_and = move(1, 2) + '[-' + move(2, 1) + ']' + move(2)
+_not = '[->-<]>+<' + move(1, 0)
+_or = '>[<' + move(0) + move(1, 0) + '>]<'
+_and = move(0, 2) + '>[-<' + move(2, 0) + '>]<' + move(2)
 
-_add = move(0, 1)
-_sub = move(0, (1, -1))
-_mul = move(1, 3) + '[-' + move(3, 1, 2) + move(2, 3) + ']' + move(3)
+_add = move(1, 0)
+_sub = move(1, (0, -1))
+_mul = move(0, 3) + '>[-<' + move(3, 0, 2) + move(2, 3) + '>]<' + move(3)
 _div = NotImplemented  # yet
 _mod = NotImplemented  # yet
 
-_to1 = '[>+<' + move(0) + ']'
+_to1 = '[>+<' + move(0) + ']' + move(1, 0)
 _neq = move(1, (0, -1)) + _to1
-_eq = _neq + move(1, 0) + _not
+_eq = _neq + _not
 
 # Array indexing (copying from and into an array) operates in place; which means it doesn't copy the whole array.
-# Results are still in 1 position, but the array precedes the the index, and therefore it's starting position is negative
+# Results are still in 0 position, but the array precedes the the index, and therefore it's starting position is negative
 # (This version only has 8 bits for expressing the distance, a version with bigger indexes might be needed)
 
 _copy_from_distance = '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + '<]' \
                       + move(-1, 2, 3) + move(3, -1) \
                       + '>[-' + move(3, -1) + move(1, 2) + move(0, 1) + '>]<' \
-                      + move(2, 1)
+                      + move(2, 0)
 
 _copy_into_distance = move(1, 2) \
                       + '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + move(2, 1) + '<]' \
