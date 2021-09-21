@@ -1,25 +1,13 @@
+# TODO: testing
+
 import collections.abc
 from itertools import zip_longest
 
-from operators import move, _if, _while
+from operators import move, _if, _while, _add, _copy_into_distance
 
 
 class VarSpace(collections.abc.Mapping):
     def __init__(self, iterable=(), sizes=None, *, _len=None):
-        # how do i represent arrays?
-        # option 1:
-        #   I put every cell of the array inside the varspace
-        # option 2:
-        #   I put arrays in a different table
-        # option1 : I don't have to modify varspace / but I can't know array length without iterating
-        # option2 : I have to add stuff to varspace / but I can know stuff about arrays more efficiently
-
-        # option 3:
-        #   I put every cell of the array inside the varspace
-        #   alongside I have a table of the starting position and length of every array
-        # option3 : requires more memory / but it's more efficient to retrieve data
-
-        # option 2
         if sizes is None:
             sizes = {}
         self.sizes = sizes
@@ -56,21 +44,50 @@ class VarSpace(collections.abc.Mapping):
             return VarSpace(dict(self) | dict(other), self.sizes | other.sizes)
         return VarSpace(dict(self) | dict(other))
 
-    def add_unique(self, position):
+    def add_unique(self):
         a = 0
         while (..., a) in self:
             a += 1
-        return self | {(..., a): position}, (..., a)
+        return self | {(..., a): len(self)}, (..., a)
 
 
 class Expression:
-    def __init__(self, inputs, return_positions, code):
-        self.inputs = inputs
-        self.return_positions = return_positions
-        self.code = code
+    def __init__(self, sub_expressions, n_returns, operation):
+        self.sub_expressions = sub_expressions
+        self.n_returns = n_returns
+        self.operation = operation
 
-    def compile(self):
-        return self.code
+    @staticmethod
+    def enumerate(iterable):
+        t = 0
+        for element in iterable:
+            if isinstance(t, Expression):
+                yield t, element
+                t += element.n_returns
+            else:
+                yield t, element
+                t += 1
+
+    def compile(self, var_space: VarSpace):
+        res = ''
+        for index, sub_expression in self.enumerate(self.sub_expressions):
+            t = len(var_space) + index
+            if isinstance(sub_expression, int):
+                res += '>' * t
+                res += '+' * sub_expression
+                res += '<' * t
+            elif isinstance(sub_expression, Expression):
+                var_space1 = var_space
+                for _ in range(index):
+                    var_space1, __ = var_space1.add_unique()
+                res += sub_expression.compile(var_space1)
+            else:  # if it is a variable
+                res += move(var_space[sub_expression], t, t + 1)
+                res += move(t + 1, var_space[sub_expression])
+        res += '>' * len(var_space)
+        res += self.operation
+        res += '<' * len(var_space)
+        return res
 
 
 class Statement:
@@ -79,44 +96,48 @@ class Statement:
 
 
 class Assignment(Statement):
-    # TODO: modify -> target might not be known at compile time
     def __init__(self, targets, expr):
         self.targets = targets
         self.expr = expr
 
     def compile(self, var_space):
-        res = ''
-        inputs = self.expr.inputs
-        for index, inp in enumerate(inputs):
-            res += move(var_space[inp], len(var_space) + index, len(var_space) + index + 1)
-            res += move(len(var_space) + index + 1, var_space[inp])
+        res = self.expr.compile(var_space)
 
-        res += '>' * len(var_space)
-        res += self.expr.compile()
-        res += '<' * len(var_space)
-
-        return_positions = self.expr.return_positions
-        return_positions_var_space = VarSpace()  # maybe put inside expression?
-        for return_position in return_positions:
-            return_positions_var_space = return_positions_var_space.add_unique(return_position)
-
-        if len(self.targets) > len(return_positions):
+        if len(self.targets) > self.expr.n_returns:
             raise Exception("assignment targets can't be more than expression return values")
-        for target, return_position in zip_longest(self.targets, return_positions):
-            # TODO: put copy_into_array somewhere here
+        for target, return_position in zip_longest(self.targets, range(self.expr.n_returns)):
+            position = len(var_space) + return_position
             if isinstance(target, tuple) and not isinstance(target[1], int):
                 array, index = target
-                t = ((var_space << len(var_space)) | return_positions_var_space) << len(
-                    return_positions_var_space)  # this line looks ugly !!!
-                d = -t[array]
-                res += '>' * (len(var_space) + len(return_positions_var_space))
-                res += ''
-                res += '<' * (len(var_space) + len(return_positions_var_space))
+
+                var_space1 = var_space
+                for _ in range(self.expr.n_returns):
+                    if _ == return_position:
+                        var_space1, name = var_space1.add_unique()
+                    else:
+                        var_space1, __ = var_space1.add_unique()
+                var_space2 = var_space1 << len(var_space1)
+
+                # The following two things should do the same thing, testing is necessary
+                if True:
+                    res += '>' * len(var_space1)
+                    res += Expression((index, var_space2[array] + 1), 1, _add).compile(var_space2)  # distance
+                    res += '<' * len(var_space1)
+                    res += move(position, len(var_space1) + 1)
+                    res += '>' * len(var_space1)
+                    res += _copy_into_distance
+                    res += '<' * len(var_space1)
+                else:
+                    res += '>' * len(var_space1)
+                    t = Expression((index, var_space2[array] + 1), 1, _add)  # distance
+                    res += Expression((t, name), 0, _copy_into_distance).compile(var_space2)
+                    res += '<' * len(var_space1)
+
             elif target is not None:
                 res += move(var_space[target])
-                res += move(len(var_space) + return_position, var_space[target])
+                res += move(position, var_space[target])
             else:
-                res += move(len(var_space) + return_position)
+                res += move(position)
         return res
 
 
@@ -126,7 +147,7 @@ class If(Statement):
         self.body = body
 
     def compile(self, var_space: VarSpace):
-        var_space, t = var_space.add_unique(len(var_space))
+        var_space, t = var_space.add_unique()
 
         res = Assignment((t,), self.test).compile(var_space)
         res += '>' * var_space[t]
@@ -142,7 +163,7 @@ class While(Statement):
         self.body = body
 
     def compile(self, var_space: VarSpace):
-        var_space, t = var_space.add_unique(len(var_space))
+        var_space, t = var_space.add_unique()
         test = Assignment((t,), self.test)
 
         res = test.compile(var_space)
