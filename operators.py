@@ -37,6 +37,7 @@ def _while(something, valuate):
 
 _noop = ''
 
+_to1 = '[>+<' + move(0) + ']' + move(1, 0)
 _not = '[->-<]>+<' + move(1, 0)
 _or = '>[<' + move(0) + move(1, 0) + '>]<'
 _and = move(0, 2) + '>[-<' + move(2, 0) + '>]<' + move(2)
@@ -47,7 +48,6 @@ _mul = move(0, 3) + '>[-<' + move(3, 0, 2) + move(2, 3) + '>]<' + move(3)
 _div = NotImplemented  # yet
 _mod = NotImplemented  # yet
 
-_to1 = '[>+<' + move(0) + ']' + move(1, 0)
 _neq = move(1, (0, -1)) + _to1
 _eq = _neq + _not
 
@@ -63,6 +63,6 @@ _copy_from_distance = '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + '<]' \
 _copy_into_distance = move(1, 2) \
                       + '[->+<' + move(-1, 3) + move(0, -1) + move(1, 0) + move(2, 1) + '<]' \
                       + move(-1) + move(2, -1) \
-                      + '>[-' + move(3, -1) + move(0, 1) + '>]'
+                      + '>[-' + move(3, -1) + move(0, 1) + '>]<'
 
 # copy into distance doesn't have a result

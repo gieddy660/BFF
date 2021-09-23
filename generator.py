@@ -3,7 +3,7 @@
 import collections.abc
 from itertools import zip_longest
 
-from operators import move, _if, _while, _add, _copy_into_distance
+from operators import move, _if, _while, _sub, _copy_into_distance
 
 
 class VarSpace(collections.abc.Mapping):
@@ -14,14 +14,13 @@ class VarSpace(collections.abc.Mapping):
         if isinstance(iterable, collections.abc.Mapping):
             self._dict = dict(iterable)
         else:
-            self._dict = {name: position for position, name in enumerate(iterable)}
+            self._dict = {}
             acc = 0
             for position, name in enumerate(iterable):
                 self._dict[name] = position + acc
-                if name in self.sizes:
-                    acc += self.sizes[name]
+                acc += self.sizes.get(name, 1) - 1
         if _len is None:
-            self._len = max(self.values()) + 1
+            self._len = max(pos + self.sizes.get(name, 1) for name, pos in self.items())
         else:
             self._len = _len
 
@@ -44,11 +43,11 @@ class VarSpace(collections.abc.Mapping):
             return VarSpace(dict(self) | dict(other), self.sizes | other.sizes)
         return VarSpace(dict(self) | dict(other))
 
-    def add_unique(self):
+    def add_unique(self, size=1):
         a = 0
         while (..., a) in self:
             a += 1
-        return self | {(..., a): len(self)}, (..., a)
+        return self | VarSpace({(..., a): len(self)}, sizes={(..., a): size}), (..., a)
 
 
 class Expression:
@@ -77,9 +76,7 @@ class Expression:
                 res += '+' * sub_expression
                 res += '<' * t
             elif isinstance(sub_expression, Expression):
-                var_space1 = var_space
-                for _ in range(index):
-                    var_space1, __ = var_space1.add_unique()
+                var_space1, _ = var_space.add_unique(index)
                 res += sub_expression.compile(var_space1)
             else:  # if it is a variable
                 res += move(var_space[sub_expression], t, t + 1)
@@ -110,18 +107,15 @@ class Assignment(Statement):
             if isinstance(target, tuple) and not isinstance(target[1], int):
                 array, index = target
 
-                var_space1 = var_space
-                for _ in range(self.expr.n_returns):
-                    if _ == return_position:
-                        var_space1, name = var_space1.add_unique()
-                    else:
-                        var_space1, __ = var_space1.add_unique()
+                var_space1, name = var_space.add_unique(self.expr.n_returns)
+                name = (name, return_position)
+
                 var_space2 = var_space1 << len(var_space1)
 
-                # The following two things should do the same thing, testing is necessary
-                if True:
+                # The following two things do the same
+                if False:
                     res += '>' * len(var_space1)
-                    res += Expression((index, var_space2[array] + 1), 1, _add).compile(var_space2)  # distance
+                    res += Expression((-var_space2[array] - 1, index), 1, _sub).compile(var_space2)  # distance
                     res += '<' * len(var_space1)
                     res += move(position, len(var_space1) + 1)
                     res += '>' * len(var_space1)
@@ -129,10 +123,10 @@ class Assignment(Statement):
                     res += '<' * len(var_space1)
                 else:
                     res += '>' * len(var_space1)
-                    t = Expression((index, var_space2[array] + 1), 1, _add)  # distance
+                    t = Expression((-var_space2[array] - 1, index), 1, _sub)  # distance
                     res += Expression((t, name), 0, _copy_into_distance).compile(var_space2)
+                    res += move(var_space2[name])
                     res += '<' * len(var_space1)
-
             elif target is not None:
                 res += move(var_space[target])
                 res += move(position, var_space[target])
@@ -176,22 +170,24 @@ class While(Statement):
 
 
 class Scope(Statement):
-    def __init__(self, var_space=None, statements=None):
+    def __init__(self, var_space=None, statements=None, init_values=()):
         if var_space is None:
             var_space = VarSpace()
         if statements is None:
             statements = []
         self.var_space = var_space
         self.statements = statements
+        self.init_values = init_values
 
-    def compile(self, var_space=None, init_values=()):
-        if var_space is None:
-            var_space = VarSpace()
-        joined_var_space = (var_space << len(
-            var_space)) | self.var_space  # this way the name from the inner scope survives
-
-        res = '>'.join('+' * value for value in init_values) + '<' * len(init_values)
+    def compile(self, external_var_space=None):
+        if external_var_space is None:
+            external_var_space = VarSpace()
+        joined_var_space = (external_var_space << len(
+            external_var_space)) | self.var_space  # this way the name from the inner scope survives
+        res = '>' * len(external_var_space)
+        res += '>'.join('+' * value for value in self.init_values) + '<' * len(self.init_values)
         res += ''.join(statement.compile(joined_var_space) for statement in self.statements)
+        res += '<' * len(external_var_space)
         return res
 
 
@@ -203,4 +199,13 @@ class Function:
         self.returns = returns
 
     def compile(self):
-        pass
+        param_var_space = VarSpace(self.parameters)
+        joined_var_space = (param_var_space << len(param_var_space)) | self.scope.var_space
+        res = '>' * len(param_var_space)
+        res += self.scope.compile(joined_var_space)
+        res += '<' * len(param_var_space)
+        for target, actual in enumerate(self.returns):
+            actual += len(self.parameters)
+            if target != actual:
+                res += move(actual, target)
+        return res
