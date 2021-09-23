@@ -71,10 +71,47 @@ class GeneratorTest(unittest.TestCase):
         decr = generator.Assignment(('c',), generator.Expression(('c', 'd'), 1, operators._sub))
         while_ = generator.While(generator.Expression(('c',), 1, operators._to1), (add, decr))
         src = while_.compile(var_space)
-        print(len(src), src)
 
         subtests = (([0, 4, 5, 1], [20, 4, 0, 1]), ([5, 5, 5, 1], [30, 5, 0, 1]), ([0, 5, 10, 2], [25, 5, 0, 2]),
                     ([6, 10, 25, 1], [0, 10, 0, 1]))
+        self.check_subtests(subtests, src)
+
+    def test_scope(self):
+        outer_var_space = generator.VarSpace('ab')
+        inner_var_space = generator.VarSpace('x')
+
+        bto1 = generator.Expression('b', 1, operators._to1)
+
+        lt = generator.Assignment('x', generator.Expression((1,), 1, operators._noop))
+        if_ = generator.If(bto1, (lt,))
+        lf = generator.Assignment('x', generator.Expression((255,), 1, operators._noop))
+        ifn_ = generator.If(generator.Expression((bto1,), 1, operators._not), (lf,))
+
+        scope = generator.Scope(inner_var_space, (if_, ifn_), (), (0,))
+
+        src = generator.Assignment('a', generator.Expression((), 1, scope)).compile(outer_var_space)
+        print(scope.compile(outer_var_space << len(outer_var_space)))
+        print(src)
+        subtests = (([0, 1], [1, 1]), ([0, 0], [255, 0]))
+        self.check_subtests(subtests, src)
+
+    def test_fun(self):
+        params = 'n'
+        var_space = generator.VarSpace('abc')
+
+        l0 = generator.Assignment('n', generator.Expression(('n', 1), 1, operators._sub))
+        l1 = generator.Assignment('c', generator.Expression('b', 1, operators._noop))
+        l2 = generator.Assignment('b', generator.Expression('ab', 1, operators._add))
+        l3 = generator.Assignment('a', generator.Expression('c', 1, operators._noop))
+        while_ = generator.While(generator.Expression('n', 1, operators._to1), (l0, l1, l2, l3))
+
+        scope = generator.Scope(var_space, (while_,), (1, 1, 0), (0,))
+        fib = generator.Function('fib', scope, params)
+        compiled_fib = fib.compile()
+
+        var_space2 = generator.VarSpace('x')
+        src = generator.Assignment('x', generator.Expression('x', 1, compiled_fib)).compile(var_space2)
+        subtests = (([0], [1]), ([1], [1]), ([2], [2]), ([3], [3]), ([4], [5]), ([5], [8]))
         self.check_subtests(subtests, src)
 
     def check_subtests(self, subtests, src):

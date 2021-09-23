@@ -82,7 +82,10 @@ class Expression:
                 res += move(var_space[sub_expression], t, t + 1)
                 res += move(t + 1, var_space[sub_expression])
         res += '>' * len(var_space)
-        res += self.operation
+        try:
+            res += self.operation.compile(var_space << len(var_space))
+        except AttributeError:
+            res += self.operation
         res += '<' * len(var_space)
         return res
 
@@ -109,24 +112,13 @@ class Assignment(Statement):
 
                 var_space1, name = var_space.add_unique(self.expr.n_returns)
                 name = (name, return_position)
-
                 var_space2 = var_space1 << len(var_space1)
 
-                # The following two things do the same
-                if False:
-                    res += '>' * len(var_space1)
-                    res += Expression((-var_space2[array] - 1, index), 1, _sub).compile(var_space2)  # distance
-                    res += '<' * len(var_space1)
-                    res += move(position, len(var_space1) + 1)
-                    res += '>' * len(var_space1)
-                    res += _copy_into_distance
-                    res += '<' * len(var_space1)
-                else:
-                    res += '>' * len(var_space1)
-                    t = Expression((-var_space2[array] - 1, index), 1, _sub)  # distance
-                    res += Expression((t, name), 0, _copy_into_distance).compile(var_space2)
-                    res += move(var_space2[name])
-                    res += '<' * len(var_space1)
+                res += '>' * len(var_space1)
+                t = Expression((-var_space2[array] - 1, index), 1, _sub)  # distance
+                res += Expression((t, name), 0, _copy_into_distance).compile(var_space2)
+                res += move(var_space2[name])
+                res += '<' * len(var_space1)
             elif target is not None:
                 res += move(var_space[target])
                 res += move(position, var_space[target])
@@ -170,7 +162,7 @@ class While(Statement):
 
 
 class Scope(Statement):
-    def __init__(self, var_space=None, statements=None, init_values=()):
+    def __init__(self, var_space=None, statements=None, init_values=(), returns=()):
         if var_space is None:
             var_space = VarSpace()
         if statements is None:
@@ -178,34 +170,40 @@ class Scope(Statement):
         self.var_space = var_space
         self.statements = statements
         self.init_values = init_values
+        self.returns = returns
 
     def compile(self, external_var_space=None):
         if external_var_space is None:
             external_var_space = VarSpace()
-        joined_var_space = (external_var_space << len(
-            external_var_space)) | self.var_space  # this way the name from the inner scope survives
+        joined_var_space = (external_var_space << len(external_var_space)) | self.var_space
         res = '>' * len(external_var_space)
-        res += '>'.join('+' * value for value in self.init_values) + '<' * len(self.init_values)
+        res += '>'.join('+' * value for value in self.init_values) + '<' * (len(self.init_values) - 1)
         res += ''.join(statement.compile(joined_var_space) for statement in self.statements)
+
+        t = 0
+        for pos in range(len(self.var_space)):
+            if pos in self.returns and t != pos:
+                res += move(pos, t)
+                t += 1
+            elif pos not in self.returns:
+                res += move(pos)
+
         res += '<' * len(external_var_space)
         return res
 
 
 class Function:
-    def __init__(self, name, scope, parameters, returns):
+    def __init__(self, name, scope, parameters):
         self.name = name
         self.scope = scope
         self.parameters = parameters
-        self.returns = returns
+        self.returns = len(scope.returns)
 
     def compile(self):
         param_var_space = VarSpace(self.parameters)
-        joined_var_space = (param_var_space << len(param_var_space)) | self.scope.var_space
-        res = '>' * len(param_var_space)
-        res += self.scope.compile(joined_var_space)
-        res += '<' * len(param_var_space)
-        for target, actual in enumerate(self.returns):
-            actual += len(self.parameters)
-            if target != actual:
-                res += move(actual, target)
+        res = self.scope.compile(param_var_space)
+
+        if self.parameters:
+            for pos in range(self.returns):
+                res += move(pos + len(self.parameters), pos)
         return res
