@@ -1,5 +1,3 @@
-# TODO: testing
-
 import collections.abc
 from itertools import zip_longest
 
